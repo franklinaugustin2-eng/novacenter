@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chatterbox — Casual English</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1F2A33; --paper:#FBF7EE; --panel:#FFFFFF;
+  --teal:#1B4B43; --teal-2:#276F63; --coral:#FF6B4A; --coral-2:#E8552F;
+  --mustard:#FFD166; --line:#E4DCC8; --muted:#6B7A78; --ok:#2F9E63; --bad:#E0524B;
+}
+:root:not([data-theme="light"]){}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#F2EFE6; --paper:#12201C; --panel:#17281F;
+    --teal:#8FD9C4; --teal-2:#6FC3AC; --coral:#FF8465; --coral-2:#FF6B4A;
+    --mustard:#FFD166; --line:#2A3A32; --muted:#9CB0AA;
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#F2EFE6; --paper:#12201C; --panel:#17281F;
+  --teal:#8FD9C4; --teal-2:#6FC3AC; --coral:#FF8465; --coral-2:#FF6B4A;
+  --mustard:#FFD166; --line:#2A3A32; --muted:#9CB0AA;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;transition:background .3s;}
+h1,h2,h3,.brand{font-family:'Baloo 2',sans-serif;}
+button{font-family:inherit;cursor:pointer;}
+#app{max-width:560px;margin:0 auto;min-height:100vh;padding:16px 16px 40px;}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:6px 2px 18px;}
+.brand{font-size:22px;font-weight:800;color:var(--teal);display:flex;align-items:center;gap:8px;}
+.stats{display:flex;gap:10px;font-weight:700;font-size:14px;}
+.pill{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:6px 12px;display:flex;align-items:center;gap:5px;}
+.screen{animation:fade .25s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* Home path */
+.path{position:relative;padding:10px 0 20px;}
+.unit-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:16px;}
+.unit-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px;}
+.unit-title{font-size:19px;font-weight:700;color:var(--teal);margin:0;}
+.unit-sub{color:var(--muted);font-size:13px;margin:4px 0 0;}
+.badge{background:var(--mustard);color:#3A2E00;font-weight:700;font-size:12px;padding:4px 9px;border-radius:12px;white-space:nowrap;}
+.node-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;}
+.node{flex:1;min-width:110px;border:none;border-radius:14px;padding:12px 8px;text-align:center;background:var(--paper);border:1px solid var(--line);font-weight:600;font-size:13px;color:var(--ink);}
+.node.done{background:var(--teal);color:#fff;border-color:var(--teal);}
+.node.locked{opacity:.45;cursor:not-allowed;}
+.node .n-ico{font-size:20px;display:block;margin-bottom:4px;}
+.pron-btn{width:100%;margin-top:6px;background:var(--coral);color:#fff;border:none;border-radius:14px;padding:12px;font-weight:700;font-size:14px;}
+
+/* Unit detail */
+.back{background:none;border:none;color:var(--muted);font-weight:600;font-size:14px;padding:0 0 12px;}
+.word-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px;}
+.word-head{display:flex;justify-content:space-between;align-items:center;}
+.word-en{font-size:19px;font-weight:700;color:var(--coral-2);}
+.speak{background:var(--paper);border:1px solid var(--line);border-radius:50%;width:34px;height:34px;font-size:16px;}
+.word-mean{margin:8px 0 4px;font-size:15px;}
+.word-ctx{color:var(--muted);font-size:13px;font-style:italic;line-height:1.5;}
+.primary{background:var(--teal);color:#fff;border:none;border-radius:14px;padding:15px;font-weight:700;font-size:16px;width:100%;margin-top:8px;}
+.primary:disabled{opacity:.4;}
+
+/* Lesson */
+.progressbar{height:10px;background:var(--line);border-radius:8px;overflow:hidden;margin-bottom:22px;}
+.progressbar>div{height:100%;background:var(--coral);transition:width .3s;}
+.q-title{font-size:20px;font-weight:700;margin:0 0 4px;line-height:1.35;}
+.q-hint{color:var(--muted);font-size:13px;margin-bottom:16px;}
+.opt{display:block;width:100%;text-align:left;background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px;font-size:15px;font-weight:600;color:var(--ink);}
+.opt.sel{border-color:var(--teal-2);}
+.opt.correct{border-color:var(--ok);background:color-mix(in srgb, var(--ok) 14%, var(--panel));}
+.opt.wrong{border-color:var(--bad);background:color-mix(in srgb, var(--bad) 14%, var(--panel));}
+.blank-input{width:100%;padding:14px;font-size:16px;border:2px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);margin-bottom:10px;}
+.chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;min-height:44px;border-bottom:2px dashed var(--line);padding-bottom:14px;}
+.chip{background:var(--mustard);color:#3A2E00;border:none;border-radius:10px;padding:9px 13px;font-weight:700;font-size:14px;}
+.chip-bank{display:flex;flex-wrap:wrap;gap:8px;}
+.chip.used{opacity:.3;}
+.feedback{border-radius:14px;padding:14px;margin-top:6px;font-weight:600;}
+.feedback.ok{background:color-mix(in srgb, var(--ok) 16%, transparent);color:var(--ok);}
+.feedback.bad{background:color-mix(in srgb, var(--bad) 16%, transparent);color:var(--bad);}
+.result{text-align:center;padding:30px 10px;}
+.result .big{font-size:48px;}
+.pair{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-bottom:12px;}
+.pair-row{display:flex;gap:10px;margin-top:8px;}
+.pair-btn{flex:1;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;}
+.pair-note{color:var(--muted);font-size:12px;margin-top:6px;}
+.tag{display:inline-block;font-size:11px;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:8px;padding:2px 7px;margin-bottom:8px;}
+.msg{color:var(--bad);font-size:13px;min-height:18px;margin:4px 0}
+.del{background:none;border:none;font-size:16px;color:var(--muted)}
+.node.cur{outline:2px solid var(--coral)}
+.sec{font-weight:700;margin:18px 0 8px;color:var(--teal)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ---------------- CONTENT ---------------- */
+const UNITS = [
+{
+  id:'u1', title:'First Hellos', sub:'Meeting people casually',
+  words:[
+    {en:"Hey there", mean:"A relaxed way to say hello", ctx:"Use it with friends, classmates, or a shop clerk you see often — too casual for a job interview."},
+    {en:"How's it going?", mean:"A casual way of asking how someone is", ctx:"Common between friends passing in the hallway. A quick 'good, you?' is the expected reply, not a long story."},
+    {en:"Not bad", mean:"Things are okay, decent — mild positive", ctx:"A modest, understated answer to 'how are you'. Sounds calmer than 'great!' and more common in everyday chat."},
+    {en:"Long time no see", mean:"Said when you haven't seen someone in a while", ctx:"A friendly opener when you run into an old friend or coworker unexpectedly."}
+  ],
+  lessons:[
+    {id:'l1', label:'Meet the words', icon:'📖', type:'learn'},
+    {id:'l2', label:'Quick check', icon:'✅', type:'practice'},
+    {id:'l3', label:'Build it', icon:'🧩', type:'build'},
+    {id:'l4', label:'Mix review', icon:'🔀', type:'mixed'}
+  ],
+  bank:[
+    {kind:'mc', q:"Your neighbor waves and says \"Hey there!\" What are they doing?", opts:["Saying a casual hello","Ending the conversation","Asking for help"], a:0},
+    {kind:'mc', q:"Which reply best answers \"How's it going?\" between friends?", opts:["I hereby confirm I am well.","Pretty good, you?","Nice to meet you for the first time."], a:1},
+    {kind:'mc', q:"You ask a coworker how their week was. They say \"Not bad.\" That means:", opts:["Terrible week","Fine, decent week","Best week ever"], a:1},
+    {kind:'mc', q:"You bump into an old classmate after 5 years. Natural thing to say?", opts:["Long time no see!","How do you do, sir.","Nice weather we're having, stranger."], a:0},
+    {kind:'mc', q:"Which greeting would sound odd in a formal job interview?", opts:["Good morning, thank you for having me.","Hey there!","Hello, it's a pleasure to meet you."], a:1},
+    {kind:'mc', q:"\"How's it going?\" is closest in meaning to:", opts:["What is your job?","How are you doing?","Where are you going?"], a:1},
+    {kind:'blank', q:"Complete: A: \"____ ! Haven't seen you since college!\"", answer:"long time no see", options:["long time no see","not bad","hey there"]},
+    {kind:'blank', q:"Complete: \"____, want to grab coffee later?\" (casual hi to a friend)", answer:"hey there", options:["hey there","long time no see","not bad"]},
+    {kind:'build', q:"Build a casual reply to \"How's it going?\"", answer:["Not","bad,","you?"], distract:["Very","officially","fine"]},
+    {kind:'build', q:"Build a greeting for an old friend you just spotted across the street.", answer:["Hey!","Long","time","no","see!"], distract:["Formally,","greetings.","Sir,"]},
+  ]
+},
+{
+  id:'u2', title:'Hanging Out', sub:'Making plans with friends',
+  words:[
+    {en:"Grab a bite", mean:"To get something quick to eat", ctx:"Casual, used when suggesting food without a big plan: 'Wanna grab a bite after work?'"},
+    {en:"Sounds good", mean:"A casual way to agree to a plan", ctx:"Used to accept an idea or invitation. Friendly and easygoing, common in texts and chats."},
+    {en:"No worries", mean:"It's fine / don't worry about it", ctx:"Used to brush off an apology or small mistake — softer and more casual than 'it's okay'."},
+    {en:"Let's hang out", mean:"Suggesting spending casual time together", ctx:"Used with friends for informal plans, no specific activity required: 'Let's hang out this weekend.'"}
+  ],
+  lessons:[
+    {id:'l1', label:'Meet the words', icon:'📖', type:'learn'},
+    {id:'l2', label:'Quick check', icon:'✅', type:'practice'},
+    {id:'l3', label:'Build it', icon:'🧩', type:'build'},
+    {id:'l4', label:'Mix review', icon:'🔀', type:'mixed'}
+  ],
+  bank:[
+    {kind:'mc', q:"A friend texts \"wanna grab a bite?\" They're suggesting:", opts:["Going for quick food","Fighting","Studying together"], a:0},
+    {kind:'mc', q:"Someone suggests a movie night and you're in. Best casual reply?", opts:["Sounds good!","I decline your proposition.","Negative."], a:0},
+    {kind:'mc', q:"You accidentally bump into a friend. They say \"no worries.\" They mean:", opts:["They're upset","It's fine, don't worry","They need an apology in writing"], a:1},
+    {kind:'mc', q:"\"Let's hang out\" is an invitation to:", opts:["Attend a formal meeting","Spend casual time together","Go to a job interview"], a:1},
+    {kind:'mc', q:"Which sentence uses 'grab a bite' correctly?", opts:["I grabbed a bite of the ocean.","Let's grab a bite before the movie.","She grabbed a bite of my homework."], a:1},
+    {kind:'mc', q:"Which is the most casual way to accept a weekend plan?", opts:["Sounds good!","I shall attend, thank you.","This is acceptable to me."], a:0},
+    {kind:'blank', q:"Complete: \"Sorry I'm late!\" — \"____, we just got here too.\"", answer:"no worries", options:["no worries","sounds good","grab a bite"]},
+    {kind:'blank', q:"Complete: \"Wanna ____ before the game starts?\" (get quick food)", answer:"grab a bite", options:["grab a bite","let's hang out","no worries"]},
+    {kind:'build', q:"Build a casual invite for the weekend with no specific plan.", answer:["Let's","hang","out","this","weekend."], distract:["Kindly","attend","formally."]},
+    {kind:'build', q:"Build a relaxed way to accept a dinner suggestion.", answer:["Sounds","good,","see","you","there!"], distract:["Acknowledged.","Confirmed","formally."]},
+  ]
+}
+];
+
+const PRON_PAIRS = [
+  {a:"ship", b:"sheep", note:"Short 'i' (ship) vs long 'ee' (sheep) — a very common mix-up sound."},
+  {a:"live", b:"leave", note:"Short 'i' (live, rhymes with 'give') vs long 'ee' (leave)."},
+  {a:"full", b:"fool", note:"Short 'u' (full) vs long 'oo' (fool) — jaw stays more relaxed for 'full'."},
+  {a:"bit", b:"beat", note:"Short 'i' (bit) vs long 'ee' (beat), same pattern as ship/sheep."},
+  {a:"wonder", b:"wander", note:"Same spelling shape, different vowel: WUN-der vs WAHN-der."},
+  {a:"though", b:"through", note:"Look similar in writing but sound completely different: 'thoh' vs 'throo'."}
+];
+
+/* ---------------- STATE ---------------- */
+const KEY='chatterbox_progress_v1';
+function loadState(){
+  try{ const s=JSON.parse(localStorage.getItem(KEY)); if(s) return s; }catch(e){}
+  return {xp:0, streak:0, doneLessons:{}, seenQ:{}};
+}
+function saveState(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+const LEVELS=[
+ {name:'Rookie',min:0,desc:'Pick the meaning of a slang word'},
+ {name:'Chatty',min:60,desc:'Pick the slang that fits a meaning'},
+ {name:'Streetwise',min:150,desc:'Fill the gap in a sentence'},
+ {name:'Smooth talker',min:300,desc:'Type the word from its meaning (first-letter hint)'},
+ {name:'Native-like',min:500,desc:'Type the word from a sentence, no hints'}];
+function levelOf(xp){let l=1;LEVELS.forEach((v,i)=>{if(xp>=v.min)l=i+1;});return l;}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+let state = loadState();
+state.custom=state.custom||[]; state.slangSeen=state.slangSeen||{};
+if(state.lastLevel===undefined) state.lastLevel=levelOf(state.xp);
+
+let view = {screen:'home'};
+
+/* ---------------- HELPERS ---------------- */
+function shuffle(arr){ const a=[...arr]; for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function speak(text){
+  try{
+    if(!('speechSynthesis' in window)) return;
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang='en-US'; u.rate=0.85;
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  }catch(e){}
+}
+function unitDone(u){ return u.lessons.every(l=>state.doneLessons[u.id+'_'+l.id]); }
+function unitLocked(idx){ if(idx===0) return false; return !unitDone(UNITS[idx-1]); }
+function lessonLocked(u, li){ if(li===0) return unitLocked(UNITS.indexOf(u)); return !state.doneLessons[u.id+'_'+u.lessons[li-1].id]; }
+
+/* pick N never-repeating questions from a unit's bank until pool exhausted, then reset */
+function pickQuestions(unit, lessonType, n){
+  const poolKey = unit.id+'_'+lessonType;
+  let pool = unit.bank.filter(q=>{
+    if(lessonType==='practice') return q.kind==='mc';
+    if(lessonType==='build') return q.kind==='build' || q.kind==='blank';
+    if(lessonType==='mixed') return true;
+    return false;
+  }).map((q,i)=>({...q, _id: unit.id+'_'+lessonType+'_'+i}));
+  let seen = state.seenQ[poolKey] || [];
+  let fresh = pool.filter(q=>!seen.includes(q._id));
+  if(fresh.length < n){ seen = []; fresh = pool; }
+  const chosen = shuffle(fresh).slice(0, Math.min(n, pool.length));
+  state.seenQ[poolKey] = [...seen, ...chosen.map(q=>q._id)];
+  saveState();
+  return chosen;
+}
+
+/* ---------------- RENDER ---------------- */
+const app = document.getElementById('app');
+function render(){
+  app.innerHTML = '';
+  const top = document.createElement('div'); top.className='topbar';
+  top.innerHTML = `<div class="brand">🗨️ Chatterbox</div>
+    <div class="stats"><div class="pill">🏅 Lv ${levelOf(state.xp)}</div><div class="pill">⭐ ${state.xp} XP</div></div>`;
+  app.appendChild(top);
+  const wrap = document.createElement('div'); wrap.className='screen';
+  app.appendChild(wrap);
+
+  if(view.screen==='home') renderHome(wrap);
+  else if(view.screen==='unit') renderUnit(wrap);
+  else if(view.screen==='lesson') renderLesson(wrap);
+  else if(view.screen==='result') renderResult(wrap);
+  else if(view.screen==='pron') renderPron(wrap);
+  else if(view.screen==='slang') renderSlang(wrap);
+  else if(view.screen==='levels') renderLevels(wrap);
+}
+
+function renderHome(wrap){
+  const path = document.createElement('div'); path.className='path';
+  UNITS.forEach((u, idx)=>{
+    const locked = unitLocked(idx);
+    const card = document.createElement('div'); card.className='unit-card';
+    const doneCount = u.lessons.filter(l=>state.doneLessons[u.id+'_'+l.id]).length;
+    card.innerHTML = `<div class="unit-head">
+        <div><p class="unit-title">${u.title}</p><p class="unit-sub">${u.sub}</p></div>
+        <span class="badge">${doneCount}/${u.lessons.length}</span>
+      </div>`;
+    const row = document.createElement('div'); row.className='node-row';
+    u.lessons.forEach((l, li)=>{
+      const isDone = !!state.doneLessons[u.id+'_'+l.id];
+      const isLocked = locked || lessonLocked(u, li);
+      const btn = document.createElement('button');
+      btn.className='node'+(isDone?' done':'')+(isLocked?' locked':'');
+      btn.innerHTML = `<span class="n-ico">${isDone?'✔️':l.icon}</span>${l.label}`;
+      btn.disabled = isLocked;
+      btn.onclick = ()=>{ view = {screen:'lesson', unitId:u.id, lessonId:l.id}; startLesson(); };
+      row.appendChild(btn);
+    });
+    card.appendChild(row);
+    if(!locked){
+      const pb = document.createElement('button'); pb.className='pron-btn';
+      pb.textContent = '🗣️ Word words + pronunciation'.replace('Word words','Vocab');
+      pb.onclick = ()=>{ view={screen:'unit', unitId:u.id}; render(); };
+      card.appendChild(pb);
+    }
+    path.appendChild(card);
+  });
+  wrap.appendChild(path);
+
+  const pron = document.createElement('button'); pron.className='primary';
+  pron.style.background='var(--coral)';
+  pron.textContent='🔊 Pronunciation Lab: tricky look-alike words';
+  pron.onclick = ()=>{ view={screen:'pron'}; render(); };
+  wrap.appendChild(pron);
+  const sl = document.createElement('button'); sl.className='primary'; sl.textContent='✍️ My Slang: add words & practice';
+  sl.onclick=()=>{ view={screen:'slang'}; render(); }; wrap.appendChild(sl);
+  const lb = document.createElement('button'); lb.className='primary'; lb.style.background='var(--mustard)'; lb.style.color='#3A2E00';
+  lb.textContent='🏅 My levels (1–5)'; lb.onclick=()=>{ view={screen:'levels'}; render(); }; wrap.appendChild(lb);
+}
+
+function renderUnit(wrap){
+  const u = UNITS.find(x=>x.id===view.unitId);
+  const back = document.createElement('button'); back.className='back'; back.textContent='← Back';
+  back.onclick=()=>{ view={screen:'home'}; render(); };
+  wrap.appendChild(back);
+  const h = document.createElement('h2'); h.textContent = u.title; h.style.color='var(--teal)'; h.style.margin='0 0 12px';
+  wrap.appendChild(h);
+  u.words.forEach(w=>{
+    const c = document.createElement('div'); c.className='word-card';
+    c.innerHTML = `<div class="word-head"><span class="word-en">${w.en}</span>
+      <button class="speak" aria-label="listen">🔊</button></div>
+      <div class="word-mean">${w.mean}</div>
+      <div class="word-ctx">${w.ctx}</div>`;
+    c.querySelector('.speak').onclick=()=>speak(w.en);
+    wrap.appendChild(c);
+  });
+}
+
+/* ---------------- LESSON ENGINE ---------------- */
+let session = null;
+
+function startLesson(){
+  const u = UNITS.find(x=>x.id===view.unitId);
+  const l = u.lessons.find(x=>x.id===view.lessonId);
+  let questions;
+  if(l.type==='learn'){
+    questions = u.words.map(w=>({kind:'flash', word:w}));
+  } else {
+    questions = pickQuestions(u, l.type, l.type==='mixed'?6:5);
+  }
+  session = {unit:u, lesson:l, questions, idx:0, correct:0, answered:false};
+  view = {screen:'lesson', unitId:u.id, lessonId:l.id};
+  render();
+}
+
+function renderLesson(wrap){
+  const s = session;
+  const pct = Math.round((s.idx)/s.questions.length*100);
+  const bar = document.createElement('div'); bar.className='progressbar';
+  bar.innerHTML = `<div style="width:${pct}%"></div>`;
+  wrap.appendChild(bar);
+
+  if(s.idx >= s.questions.length){
+    finishLesson();
+    return;
+  }
+  const q = s.questions[s.idx];
+  const box = document.createElement('div');
+
+  if(q.kind==='flash'){
+    box.innerHTML = `<span class="tag">New word</span>
+      <div class="word-card" style="margin-bottom:16px">
+        <div class="word-head"><span class="word-en">${q.word.en}</span><button class="speak">🔊</button></div>
+        <div class="word-mean">${q.word.mean}</div>
+        <div class="word-ctx">${q.word.ctx}</div>
+      </div>`;
+    box.querySelector('.speak').onclick=()=>speak(q.word.en);
+    const next = document.createElement('button'); next.className='primary'; next.textContent='Got it';
+    next.onclick=()=>{ s.idx++; render(); };
+    box.appendChild(next);
+  }
+  else if(q.kind==='mc'){
+    box.innerHTML = `<p class="q-title">${q.q}</p><p class="q-hint">Pick the best answer</p>`;
+    const optsWrap = document.createElement('div');
+    let picked=-1;
+    q.opts.forEach((o,i)=>{
+      const b=document.createElement('button'); b.className='opt'; b.textContent=o;
+      b.onclick=()=>{
+        if(s.answered) return;
+        s.answered=true; picked=i;
+        [...optsWrap.children].forEach((el,j)=>{
+          if(j===q.a) el.classList.add('correct');
+          else if(j===i) el.classList.add('wrong');
+        });
+        const fb=document.createElement('div');
+        fb.className='feedback '+(i===q.a?'ok':'bad');
+        fb.textContent = i===q.a ? 'Nice — that\'s right!' : 'Not quite — the highlighted one is correct.';
+        box.appendChild(fb);
+        if(i===q.a){ s.correct++; state.xp+=5; saveState(); }
+        addContinue(box);
+      };
+      optsWrap.appendChild(b);
+    });
+    box.appendChild(optsWrap);
+  }
+  else if(q.kind==='blank'){
+    box.innerHTML = `<p class="q-title">${q.q}</p><p class="q-hint">Choose the right phrase</p>`;
+    const optsWrap = document.createElement('div');
+    shuffle(q.options).forEach(o=>{
+      const b=document.createElement('button'); b.className='opt'; b.textContent=o;
+      b.onclick=()=>{
+        if(s.answered) return;
+        s.answered=true;
+        const correct = o.toLowerCase()===q.answer.toLowerCase();
+        b.classList.add(correct?'correct':'wrong');
+        if(!correct){
+          [...optsWrap.children].forEach(el=>{ if(el.textContent.toLowerCase()===q.answer.toLowerCase()) el.classList.add('correct'); });
+        }
+        const fb=document.createElement('div'); fb.className='feedback '+(correct?'ok':'bad');
+        fb.textContent = correct ? 'Nice — that\'s right!' : `The correct phrase is "${q.answer}".`;
+        box.appendChild(fb);
+        if(correct){ s.correct++; state.xp+=5; saveState(); }
+        addContinue(box);
+      };
+      optsWrap.appendChild(b);
+    });
+    box.appendChild(optsWrap);
+  }
+  else if(q.kind==='build'){
+    box.innerHTML = `<p class="q-title">${q.q}</p><p class="q-hint">Tap the words in order</p>`;
+    const chosenRow = document.createElement('div'); chosenRow.className='chip-row';
+    const bank = document.createElement('div'); bank.className='chip-bank';
+    const words = shuffle([...q.answer, ...q.distract]);
+    const chosen = [];
+    words.forEach(w=>{
+      const c = document.createElement('button'); c.className='chip'; c.textContent=w;
+      c.onclick=()=>{
+        if(s.answered || c.classList.contains('used')) return;
+        c.classList.add('used'); chosen.push(w);
+        const chip = document.createElement('span'); chip.className='chip'; chip.textContent=w;
+        chosenRow.appendChild(chip);
+        if(chosen.length===q.answer.length){
+          s.answered=true;
+          const correct = chosen.join(' ').toLowerCase()===q.answer.join(' ').toLowerCase();
+          const fb=document.createElement('div'); fb.className='feedback '+(correct?'ok':'bad');
+          fb.textContent = correct ? 'Nice — that\'s right!' : `Correct order: "${q.answer.join(' ')}"`;
+          box.appendChild(fb);
+          if(correct){ s.correct++; state.xp+=5; saveState(); }
+          addContinue(box);
+        }
+      };
+      bank.appendChild(c);
+    });
+    box.appendChild(chosenRow); box.appendChild(bank);
+  }
+  else if(q.kind==='type'){
+    box.innerHTML = `<p class="q-title">${q.q}</p><p class="q-hint">${q.hint||'Type the answer'}</p>`;
+    const inp=document.createElement('input'); inp.className='blank-input'; inp.placeholder='Type here…'; inp.autocomplete='off';
+    const chk=document.createElement('button'); chk.className='primary'; chk.textContent='Check';
+    const norm=t=>t.toLowerCase().replace(/[^\p{L}\p{N} ]/gu,'').replace(/\s+/g,' ').trim();
+    chk.onclick=()=>{
+      if(s.answered||!inp.value.trim()) return;
+      s.answered=true; inp.disabled=true; chk.remove();
+      const ok=norm(inp.value)===norm(q.answer);
+      const fb=document.createElement('div'); fb.className='feedback '+(ok?'ok':'bad');
+      fb.textContent= ok ? 'Nice — that\'s right!' : `The answer is "${q.answer}".`;
+      box.appendChild(fb);
+      if(ok){ s.correct++; state.xp+=8; saveState(); }
+      addContinue(box);
+    };
+    inp.onkeydown=e=>{ if(e.key==='Enter') chk.click(); };
+    box.appendChild(inp); box.appendChild(chk);
+  }
+  wrap.appendChild(box);
+}
+
+function addContinue(box){
+  const btn = document.createElement('button'); btn.className='primary'; btn.textContent='Continue';
+  btn.onclick=()=>{ session.idx++; session.answered=false; render(); };
+  box.appendChild(btn);
+}
+
+function finishLesson(){
+  const key = session.unit.id+'_'+session.lesson.id;
+  if(session.custom){ state.xp += 10; }
+  else if(!state.doneLessons[key]){ state.doneLessons[key]=true; state.xp += 15; }
+  saveState();
+  view = {screen:'result'};
+  render();
+}
+
+function renderResult(wrap){
+  const s = session;
+  const total = s.questions.filter(q=>q.kind!=='flash').length;
+  const r = document.createElement('div'); r.className='result';
+  r.innerHTML = `<div class="big">${total? '🎉':'📘'}</div>
+    <h2 style="color:var(--teal)">Lesson complete!</h2>
+    <p style="color:var(--muted)">${total? s.correct+' / '+total+' correct' : 'You met '+s.questions.length+' new words'}</p>`;
+  const lv=levelOf(state.xp);
+  if(lv>state.lastLevel){ r.innerHTML+=`<p style="font-weight:700;color:var(--coral-2)">🚀 Level up! You're now Level ${lv}: ${LEVELS[lv-1].name}</p>`; state.lastLevel=lv; saveState(); }
+  const btn = document.createElement('button'); btn.className='primary'; btn.textContent= s.custom?'Back to My Slang':'Back to path';
+  btn.onclick=()=>{ view={screen:s.custom?'slang':'home'}; render(); };
+  r.appendChild(btn);
+  wrap.appendChild(r);
+}
+
+function renderPron(wrap){
+  const back = document.createElement('button'); back.className='back'; back.textContent='← Back';
+  back.onclick=()=>{ view={screen:'home'}; render(); };
+  wrap.appendChild(back);
+  const h = document.createElement('h2'); h.textContent='Pronunciation Lab'; h.style.color='var(--coral-2)'; h.style.margin='0 0 4px';
+  wrap.appendChild(h);
+  const p = document.createElement('p'); p.style.color='var(--muted)'; p.style.marginTop='0';
+  p.textContent='These word pairs look or sound almost the same — tap to hear the difference.';
+  wrap.appendChild(p);
+  PRON_PAIRS.forEach(pr=>{
+    const c = document.createElement('div'); c.className='pair';
+    c.innerHTML = `<strong>${pr.a} / ${pr.b}</strong>
+      <div class="pair-row">
+        <button class="pair-btn">🔊 ${pr.a}</button>
+        <button class="pair-btn">🔊 ${pr.b}</button>
+      </div>
+      <div class="pair-note">${pr.note}</div>`;
+    const btns = c.querySelectorAll('.pair-btn');
+    btns[0].onclick=()=>speak(pr.a);
+    btns[1].onclick=()=>speak(pr.b);
+    wrap.appendChild(c);
+  });
+}
+
+/* ---------- MY SLANG + LEVELS ---------- */
+function allMeanings(){ return [...state.custom.map(w=>w.mean), ...UNITS.flatMap(u=>u.words.map(w=>w.mean))]; }
+function allWords(){ return [...state.custom.map(w=>w.en), ...UNITS.flatMap(u=>u.words.map(w=>w.en))]; }
+
+function makeSlangQuestions(lv){
+  const key='lv'+lv;
+  let seen=state.slangSeen[key]||[];
+  let pool=state.custom.filter(w=>!seen.includes(w.id));
+  if(!pool.length){ seen=[]; pool=state.custom; }
+  const picked=shuffle(pool).slice(0,6);
+  state.slangSeen[key]=[...seen,...picked.map(w=>w.id)]; saveState();
+  const distract=(arr,cur)=>shuffle([...new Set(arr)].filter(x=>x.toLowerCase()!==cur.toLowerCase())).slice(0,2);
+  return picked.map(w=>{
+    const re=new RegExp(w.en.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i');
+    const gap=(w.ctx&&re.test(w.ctx))? w.ctx.replace(re,'____') : null;
+    if(lv===1){ const o=shuffle([w.mean,...distract(allMeanings(),w.mean)]); return {kind:'mc',q:`What does “${esc(w.en)}” mean?`,opts:o,a:o.indexOf(w.mean)}; }
+    if(lv===2||(lv===3&&!gap)){ const o=shuffle([w.en,...distract(allWords(),w.en)]); return {kind:'mc',q:`Which expression means: “${esc(w.mean)}”?`,opts:o,a:o.indexOf(w.en)}; }
+    if(lv===3) return {kind:'blank',q:`Fill the gap: ${esc(gap)}`,answer:w.en,options:[w.en,...distract(allWords(),w.en)]};
+    if(lv===4) return {kind:'type',q:`Type the expression that means: “${esc(w.mean)}”`,hint:`Starts with “${esc(w.en[0])}” · ${w.en.length} letters`,answer:w.en};
+    return {kind:'type',q:gap?`Type the missing expression: ${esc(gap)}`:`Type the expression for: “${esc(w.mean)}”`,hint:'No hints at this level',answer:w.en};
+  });
+}
+
+function startSlang(lv){
+  if(!state.custom.length) return;
+  session={unit:{id:'slang',title:'My Slang'},lesson:{id:'lv'+lv},questions:makeSlangQuestions(lv),idx:0,correct:0,answered:false,custom:true};
+  view={screen:'lesson'}; render();
+}
+
+function renderSlang(wrap){
+  const back=document.createElement('button'); back.className='back'; back.textContent='← Back';
+  back.onclick=()=>{ view={screen:'home'}; render(); }; wrap.appendChild(back);
+  const h=document.createElement('h2'); h.textContent='My Slang'; h.style.cssText='color:var(--teal);margin:0 0 12px'; wrap.appendChild(h);
+  const f=document.createElement('div'); f.className='word-card';
+  f.innerHTML=`<input class="blank-input" id="sw" placeholder="Slang word or expression (e.g. low-key)" maxlength="40">
+    <input class="blank-input" id="sm" placeholder="What does it mean?" maxlength="120">
+    <input class="blank-input" id="sc" placeholder="Example sentence using it (optional)" maxlength="160">
+    <div class="msg" id="smsg"></div><button class="primary" style="margin-top:0">Add to my list</button>`;
+  f.querySelector('button').onclick=()=>{
+    const en=f.querySelector('#sw').value.trim(), mean=f.querySelector('#sm').value.trim(), ctx=f.querySelector('#sc').value.trim();
+    const msg=f.querySelector('#smsg');
+    if(!en||!mean){ msg.textContent='Add the word and its meaning.'; return; }
+    if(allWords().some(x=>x.toLowerCase()===en.toLowerCase())){ msg.textContent='That expression is already in the course or your list.'; return; }
+    state.custom.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),en,mean,ctx}); saveState(); render();
+  };
+  wrap.appendChild(f);
+  const cur=levelOf(state.xp);
+  const t=document.createElement('div'); t.className='sec'; t.textContent= state.custom.length?'Practice by level':'Add a word to unlock practice'; wrap.appendChild(t);
+  const row=document.createElement('div'); row.className='node-row';
+  LEVELS.forEach((L,i)=>{
+    const b=document.createElement('button'); const lock=(i+1>cur)||!state.custom.length;
+    b.className='node'+(lock?' locked':''); b.disabled=lock;
+    b.innerHTML=`<span class="n-ico">${i+1>cur?'🔒':'🎯'}</span>Lv ${i+1}<br><small>${L.name}</small>`;
+    b.onclick=()=>startSlang(i+1); row.appendChild(b);
+  });
+  wrap.appendChild(row);
+  if(state.custom.length){ const l=document.createElement('div'); l.className='sec'; l.textContent='Your words ('+state.custom.length+')'; wrap.appendChild(l); }
+  state.custom.forEach(w=>{
+    const c=document.createElement('div'); c.className='word-card';
+    c.innerHTML=`<div class="word-head"><span class="word-en">${esc(w.en)}</span><span><button class="speak" aria-label="listen">🔊</button> <button class="del" aria-label="delete">🗑️</button></span></div>
+      <div class="word-mean">${esc(w.mean)}</div>${w.ctx?`<div class="word-ctx">${esc(w.ctx)}</div>`:''}`;
+    c.querySelector('.speak').onclick=()=>speak(w.en);
+    c.querySelector('.del').onclick=()=>{ state.custom=state.custom.filter(x=>x.id!==w.id); saveState(); render(); };
+    wrap.appendChild(c);
+  });
+}
+
+function renderLevels(wrap){
+  const back=document.createElement('button'); back.className='back'; back.textContent='← Back';
+  back.onclick=()=>{ view={screen:'home'}; render(); }; wrap.appendChild(back);
+  const h=document.createElement('h2'); h.textContent='Your levels'; h.style.cssText='color:var(--teal);margin:0 0 4px'; wrap.appendChild(h);
+  const cur=levelOf(state.xp);
+  const p=document.createElement('p'); p.style.cssText='color:var(--muted);margin-top:0';
+  p.textContent= cur<5 ? `${LEVELS[cur].min-state.xp} XP to reach Level ${cur+1}. Earn XP from lessons and slang practice.` : 'Top level reached. Keep your words fresh!';
+  wrap.appendChild(p);
+  LEVELS.forEach((L,i)=>{
+    const c=document.createElement('div'); c.className='word-card';
+    if(i+1>cur) c.style.opacity='.55'; if(i+1===cur) c.style.borderColor='var(--coral)';
+    c.innerHTML=`<div class="word-head"><span class="word-en">Level ${i+1} · ${L.name}</span><span class="badge">${L.min} XP</span></div><div class="word-mean">${L.desc}</div>`;
+    wrap.appendChild(c);
+  });
+}
+
+render();
+</script>
+</body>
+</html>
