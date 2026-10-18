@@ -90,6 +90,16 @@ button{font-family:inherit;cursor:pointer;}
 .del{background:none;border:none;font-size:16px;color:var(--muted)}
 .node.cur{outline:2px solid var(--coral)}
 .sec{font-weight:700;margin:18px 0 8px;color:var(--teal)}
+.chatbox{height:340px;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.bubble{max-width:82%;padding:10px 13px;border-radius:14px;font-size:14.5px;line-height:1.45;white-space:pre-wrap;word-wrap:break-word}
+.bubble.me{align-self:flex-end;background:var(--teal);color:#fff}
+.bubble.bot{align-self:flex-start;background:var(--paper);border:1px solid var(--line)}
+.chat-row{display:flex;gap:8px}.chat-row .blank-input{margin:0;flex:1}.chat-row .primary{width:auto;margin:0;padding:0 18px}
+textarea.blank-input{font-family:inherit;resize:vertical}
+.cmt{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px}
+.cmt-h{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin-bottom:4px}
+.cmt-h b{color:var(--teal);font-size:14px}
+.cmt-t{font-size:14.5px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word}
 </style>
 </head>
 <body>
@@ -234,6 +244,8 @@ function render(){
   else if(view.screen==='pron') renderPron(wrap);
   else if(view.screen==='slang') renderSlang(wrap);
   else if(view.screen==='levels') renderLevels(wrap);
+  else if(view.screen==='chat') renderChat(wrap);
+  else if(view.screen==='comments') renderComments(wrap);
 }
 
 function renderHome(wrap){
@@ -277,6 +289,10 @@ function renderHome(wrap){
   sl.onclick=()=>{ view={screen:'slang'}; render(); }; wrap.appendChild(sl);
   const lb = document.createElement('button'); lb.className='primary'; lb.style.background='var(--mustard)'; lb.style.color='#3A2E00';
   lb.textContent='🏅 My levels (1–5)'; lb.onclick=()=>{ view={screen:'levels'}; render(); }; wrap.appendChild(lb);
+  const cb = document.createElement('button'); cb.className='primary'; cb.style.background='var(--coral-2)'; cb.textContent='💬 Chat with the coach';
+  cb.onclick=()=>{ view={screen:'chat'}; render(); }; wrap.appendChild(cb);
+  const cm = document.createElement('button'); cm.className='primary'; cm.style.background='var(--teal-2)'; cm.textContent='📝 Community comments';
+  cm.onclick=()=>{ view={screen:'comments'}; render(); }; wrap.appendChild(cm);
 }
 
 function renderUnit(wrap){
@@ -570,6 +586,93 @@ function renderLevels(wrap){
     c.innerHTML=`<div class="word-head"><span class="word-en">Level ${i+1} · ${L.name}</span><span class="badge">${L.min} XP</span></div><div class="word-mean">${L.desc}</div>`;
     wrap.appendChild(c);
   });
+}
+
+/* ---------- CHAT COACH (in memory only, never saved) ---------- */
+let chatMsgs=[], chatBusy=false;
+const CHAT_RULES="You are Chatterbox, a friendly casual-English tutor chatting with a learner. Reply in 1-3 short, natural sentences. Use everyday slang sparingly and briefly explain any slang you use. If the learner makes a mistake, gently show the corrected sentence, then keep the conversation going with one question. Plain text only.";
+function paintChat(box){
+  box.innerHTML='';
+  if(!chatMsgs.length){ const h=document.createElement('div'); h.className='q-hint'; h.textContent='Say hi! Try: “Hey, how\'s it going?”'; box.appendChild(h); }
+  chatMsgs.forEach(m=>{ const d=document.createElement('div'); d.className='bubble '+(m.role==='user'?'me':'bot'); d.textContent=m.content; box.appendChild(d); });
+  box.scrollTop=box.scrollHeight;
+}
+async function sendChat(inp,box,btn){
+  const text=inp.value.trim(); if(!text||chatBusy) return;
+  inp.value=''; chatBusy=true; btn.disabled=true;
+  chatMsgs.push({role:'user',content:text}); const bot={role:'assistant',content:'…'}; chatMsgs.push(bot); paintChat(box);
+  try{
+    const sample=await claude.use('sample'); if(!sample) throw {code:'unavailable'};
+    const tr=chatMsgs.slice(0,-1).slice(-12).map(m=>(m.role==='user'?'Learner: ':'Coach: ')+m.content).join('\n');
+    const r=await sample(CHAT_RULES+'\n\n'+tr+'\nCoach:',{cache:false,modelTier:'quick',onText:u=>{ bot.content=u.text; if(view.screen==='chat') paintChat(box); }});
+    bot.content=r.text;
+  }catch(e){
+    bot.content = e&&e.code==='not_granted' ? 'The coach needs your permission to reply. Reload and allow it.' : e&&e.code==='rate_limited' ? 'Too many messages. Wait a moment and try again.' : 'The coach is unavailable right now.';
+  }
+  chatBusy=false; btn.disabled=false; if(view.screen==='chat') paintChat(box);
+}
+function renderChat(wrap){
+  const back=document.createElement('button'); back.className='back'; back.textContent='← Back';
+  back.onclick=()=>{ view={screen:'home'}; render(); }; wrap.appendChild(back);
+  const h=document.createElement('h2'); h.textContent='Chat with the coach'; h.style.cssText='color:var(--teal);margin:0 0 4px'; wrap.appendChild(h);
+  const p=document.createElement('p'); p.style.cssText='color:var(--muted);margin-top:0;font-size:13px'; p.textContent='Practice casual English. Messages are not saved: they disappear when you reload.'; wrap.appendChild(p);
+  const box=document.createElement('div'); box.className='chatbox'; wrap.appendChild(box); paintChat(box);
+  const row=document.createElement('div'); row.className='chat-row';
+  const inp=document.createElement('input'); inp.className='blank-input'; inp.placeholder='Type a message…'; inp.maxLength=300;
+  const btn=document.createElement('button'); btn.className='primary'; btn.textContent='Send'; btn.disabled=chatBusy;
+  btn.onclick=()=>sendChat(inp,box,btn); inp.onkeydown=e=>{ if(e.key==='Enter') btn.click(); };
+  row.appendChild(inp); row.appendChild(btn); wrap.appendChild(row);
+}
+
+/* ---------- COMMENTS (shared, stored on the site) ---------- */
+let cdb=null, cuid=null, cdata=[], cerr='', cready=false;
+function paintComments(){
+  const el=document.getElementById('clist'); if(!el) return;
+  el.innerHTML='';
+  if(cerr){ const m=document.createElement('p'); m.className='msg'; m.textContent=cerr; el.appendChild(m); }
+  else if(cready&&!cdata.length){ const m=document.createElement('p'); m.className='q-hint'; m.textContent='No comments yet. Be the first!'; el.appendChild(m); }
+  cdata.forEach(c=>{
+    const d=document.createElement('div'); d.className='cmt';
+    const hd=document.createElement('div'); hd.className='cmt-h';
+    const nm=document.createElement('b'); nm.textContent=c.name||'Guest';
+    const rt=document.createElement('span'); rt.textContent=c.ts?new Date(c.ts).toLocaleString():'';
+    if(cuid&&c.uid===cuid){ const x=document.createElement('button'); x.className='del'; x.textContent='🗑️'; x.setAttribute('aria-label','delete comment');
+      x.onclick=async()=>{ try{ await cdb.doc('comments/'+c.id).delete(); }catch(e){} }; rt.appendChild(document.createTextNode(' ')); rt.appendChild(x); }
+    hd.appendChild(nm); hd.appendChild(rt);
+    const t=document.createElement('div'); t.className='cmt-t'; t.textContent=c.text||'';
+    d.appendChild(hd); d.appendChild(t); el.appendChild(d);
+  });
+}
+(async()=>{
+  try{
+    cdb=await claude.use('db'); const u=await claude.use('user'); cuid=u&&u.id?await u.id():null;
+    if(!cdb){ cerr='Comments need a signed-in claude.ai viewer.'; cready=true; paintComments(); return; }
+    cdb.collection('comments').onSnapshot(s=>{
+      cready=true; cerr='';
+      cdata=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,100); paintComments();
+    },()=>{ cready=true; cerr='Could not load comments.'; paintComments(); });
+  }catch(e){ cready=true; cerr='Comments are unavailable here.'; paintComments(); }
+})();
+function renderComments(wrap){
+  const back=document.createElement('button'); back.className='back'; back.textContent='← Back';
+  back.onclick=()=>{ view={screen:'home'}; render(); }; wrap.appendChild(back);
+  const h=document.createElement('h2'); h.textContent='Community comments'; h.style.cssText='color:var(--teal);margin:0 0 4px'; wrap.appendChild(h);
+  const p=document.createElement('p'); p.style.cssText='color:var(--muted);margin-top:0;font-size:13px'; p.textContent='Comments are saved on the site and appear on every device. Your progress stays on this device.'; wrap.appendChild(p);
+  const f=document.createElement('div'); f.className='word-card';
+  f.innerHTML='<input class="blank-input" id="cn" placeholder="Your name" maxlength="30"><textarea class="blank-input" id="ct" rows="3" maxlength="300" placeholder="Write a comment…"></textarea><div class="msg" id="cmsg"></div><button class="primary" style="margin-top:0">Post comment</button>';
+  const nameEl=f.querySelector('#cn'); try{ nameEl.value=localStorage.getItem('cb_name')||''; }catch(e){}
+  f.querySelector('button').onclick=async()=>{
+    const name=nameEl.value.trim()||'Guest', text=f.querySelector('#ct').value.trim(), msg=f.querySelector('#cmsg');
+    if(!text){ msg.textContent='Write something first.'; return; }
+    if(!cdb){ msg.textContent='Comments are unavailable right now.'; return; }
+    try{ localStorage.setItem('cb_name',name); }catch(e){}
+    try{
+      await cdb.doc('comments/'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)).set({uid:cuid||'',name,text,ts:Date.now()});
+      f.querySelector('#ct').value=''; msg.textContent='';
+    }catch(e){ msg.textContent='Could not post your comment. Try again.'; }
+  };
+  wrap.appendChild(f);
+  const l=document.createElement('div'); l.id='clist'; wrap.appendChild(l); paintComments();
 }
 
 render();
